@@ -1,0 +1,1189 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="h-full bg-slate-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel de Vendas | Gesso Alves</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- QRCode JS -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0284c7',
+                            600: '#0369a1',
+                            700: '#075985',
+                            800: '#0c4a6e',
+                            900: '#0f172a',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+            .print-only {
+                display: block !important;
+            }
+            body {
+                background: white !important;
+            }
+        }
+    </style>
+</head>
+<body class="h-full flex flex-col font-sans text-slate-800 antialiased selection:bg-brand-500 selection:text-white">
+
+    <div id="app" class="flex h-screen overflow-hidden">
+        
+        <!-- Sidebar Navigation -->
+        <aside class="w-64 bg-slate-900 text-slate-300 flex flex-col flex-shrink-0 no-print">
+            <!-- Company Header -->
+            <div class="p-5 border-b border-slate-800 flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-brand-500 flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-brand-500/30">
+                    GA
+                </div>
+                <div>
+                    <h1 class="font-bold text-white leading-tight">Gesso Alves</h1>
+                    <p class="text-xs text-slate-400">Painel do Vendedor</p>
+                </div>
+            </div>
+
+            <!-- Navigation Links -->
+            <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+                <button onclick="switchTab('dashboard')" id="nav-dashboard" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors bg-brand-600 text-white">
+                    <i class="fa-solid fa-chart-pie w-5 text-center"></i>
+                    <span>Visão Geral</span>
+                </button>
+
+                <button onclick="switchTab('sales')" id="nav-sales" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors hover:bg-slate-800 hover:text-white">
+                    <i class="fa-solid fa-receipt w-5 text-center"></i>
+                    <span>Gestão de Vendas</span>
+                </button>
+
+                <button onclick="openNewSaleModal()" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-emerald-400 hover:bg-emerald-950/40 hover:text-emerald-300 border border-emerald-500/20 mt-4">
+                    <i class="fa-solid fa-circle-plus w-5 text-center"></i>
+                    <span>Nova Cobrança</span>
+                </button>
+
+                <div class="pt-6 pb-2">
+                    <p class="px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Filtro Rápido</p>
+                </div>
+                <button onclick="filterByStatus('TODAS')" class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800">
+                    <span>Todas as Vendas</span>
+                    <span id="badge-count-all" class="bg-slate-800 px-2 py-0.5 rounded-full">0</span>
+                </button>
+                <button onclick="filterByStatus('PENDENTE')" class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-amber-400 hover:bg-slate-800">
+                    <span><i class="fa-solid fa-clock text-xs mr-1.5"></i> Pendentes</span>
+                    <span id="badge-count-pending" class="bg-amber-950/60 px-2 py-0.5 rounded-full">0</span>
+                </button>
+                <button onclick="filterByStatus('PAGO')" class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-emerald-400 hover:bg-slate-800">
+                    <span><i class="fa-solid fa-circle-check text-xs mr-1.5"></i> Pagas</span>
+                    <span id="badge-count-paid" class="bg-emerald-950/60 px-2 py-0.5 rounded-full">0</span>
+                </button>
+            </nav>
+
+            <div class="p-4 border-t border-slate-800 text-xs text-slate-400 bg-slate-950/50">
+                <p class="font-semibold text-slate-300">Gesso Alves Ltda</p>
+                <p class="mt-0.5 truncate"><i class="fa-solid fa-id-card mr-1"></i> 09.108.273/0001-29</p>
+                <p class="mt-0.5 truncate"><i class="fa-solid fa-envelope mr-1"></i> comercialgessoalves@gmail.com</p>
+            </div>
+        </aside>
+
+        <main class="flex-1 flex flex-col h-screen overflow-hidden bg-slate-50">
+            <!-- Top App Bar -->
+            <header class="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between no-print flex-shrink-0">
+                <div class="flex items-center space-x-3">
+                    <h2 id="page-title" class="text-xl font-bold text-slate-800">Visão Geral do Painel</h2>
+                    <span class="text-xs px-2.5 py-1 bg-brand-50 text-brand-700 rounded-full font-medium border border-brand-100">
+                        VendedoresAtivos
+                    </span>
+                </div>
+
+                <div class="flex items-center space-x-4">
+                    <!-- Current Seller Selection -->
+                    <div class="flex items-center space-x-2 bg-slate-100 p-1.5 rounded-lg border border-slate-200">
+                        <i class="fa-solid fa-user-tag text-slate-400 pl-2 text-xs"></i>
+                        <label for="seller-selector" class="text-xs font-medium text-slate-600">Vendedor:</label>
+                        <select id="seller-selector" onchange="changeActiveSeller(this.value)" class="bg-transparent text-xs font-bold text-slate-800 focus:outline-none cursor-pointer pr-2">
+                            <option value="TODOS">Todos os Vendedores</option>
+                            <option value="Carlos Silva">Carlos Silva</option>
+                            <option value="Ana Paula">Ana Paula</option>
+                            <option value="Roberto Alves">Roberto Alves</option>
+                        </select>
+                    </div>
+
+                    <button onclick="openNewSaleModal()" class="bg-brand-600 hover:bg-brand-700 text-white font-medium text-xs px-4 py-2.5 rounded-lg shadow-sm transition flex items-center space-x-2">
+                        <i class="fa-solid fa-plus"></i>
+                        <span>Gerar Cobrança</span>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Scrollable Content Area -->
+            <div class="flex-1 overflow-y-auto p-6 space-y-6" id="main-content-scroll">
+                
+                <div id="tab-dashboard" class="space-y-6">
+                    <!-- KPI Cards Grid -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+                        <!-- Total Faturado Card -->
+                        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm relative overflow-hidden">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <p class="text-xs font-medium text-slate-500 uppercase tracking-wide">Faturamento Confirmado</p>
+                                    <h3 id="kpi-total-paid" class="text-2xl font-extrabold text-slate-900 mt-2">R$ 0,00</h3>
+                                    <span class="inline-flex items-center text-xs font-semibold text-emerald-600 mt-2">
+                                        <i class="fa-solid fa-circle-check mr-1"></i> Cobranças Liquidadas
+                                    </span>
+                                </div>
+                                <div class="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-lg font-bold">
+                                    <i class="fa-solid fa-sack-dollar"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Cobranças Pendentes Card -->
+                        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm relative overflow-hidden">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <p class="text-xs font-medium text-slate-500 uppercase tracking-wide">A Receber (Pendentes)</p>
+                                    <h3 id="kpi-total-pending" class="text-2xl font-extrabold text-amber-600 mt-2">R$ 0,00</h3>
+                                    <span class="inline-flex items-center text-xs font-semibold text-amber-600 mt-2">
+                                        <i class="fa-solid fa-hourglass-half mr-1"></i> Aguardando Pagamento
+                                    </span>
+                                </div>
+                                <div class="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-lg font-bold">
+                                    <i class="fa-solid fa-clock-rotate-left"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Total de Vendas Card -->
+                        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm relative overflow-hidden">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <p class="text-xs font-medium text-slate-500 uppercase tracking-wide">Total de Pedidos</p>
+                                    <h3 id="kpi-total-orders" class="text-2xl font-extrabold text-slate-900 mt-2">0</h3>
+                                    <span class="inline-flex items-center text-xs font-semibold text-brand-600 mt-2">
+                                        <i class="fa-solid fa-cart-shopping mr-1"></i> Pedidos Gerados
+                                    </span>
+                                </div>
+                                <div class="w-12 h-12 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center text-lg font-bold">
+                                    <i class="fa-solid fa-file-invoice-dollar"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Ticket Médio Card -->
+                        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm relative overflow-hidden">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <p class="text-xs font-medium text-slate-500 uppercase tracking-wide">Ticket Médio</p>
+                                    <h3 id="kpi-average-ticket" class="text-2xl font-extrabold text-slate-900 mt-2">R$ 0,00</h3>
+                                    <span class="inline-flex items-center text-xs font-semibold text-indigo-600 mt-2">
+                                        <i class="fa-solid fa-chart-line mr-1"></i> Média por Venda
+                                    </span>
+                                </div>
+                                <div class="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-lg font-bold">
+                                    <i class="fa-solid fa-calculator"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Charts Section Grid -->
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <!-- Revenue Bar Chart -->
+                        <div class="lg:col-span-2 bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm">
+                            <div class="flex items-center justify-between mb-4">
+                                <div>
+                                    <h3 class="font-bold text-slate-800">Evolução Mensal das Vendas</h3>
+                                    <p class="text-xs text-slate-500">Valores faturados e pendentes acumulados</p>
+                                </div>
+                                <div class="flex items-center space-x-2 text-xs">
+                                    <span class="inline-flex items-center"><span class="w-3 h-3 rounded-full bg-brand-500 mr-1"></span>Faturamento</span>
+                                </div>
+                            </div>
+                            <div class="h-64 relative">
+                                <canvas id="salesBarChart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Payment Methods Doughnut Chart -->
+                        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm">
+                            <div class="mb-4">
+                                <h3 class="font-bold text-slate-800">Formas de Pagamento</h3>
+                                <p class="text-xs text-slate-500">Distribuição das cobranças</p>
+                            </div>
+                            <div class="h-64 relative flex items-center justify-center">
+                                <canvas id="paymentMethodsChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Recent Sales List in Dashboard -->
+                    <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+                        <div class="p-5 border-b border-slate-100 flex items-center justify-between">
+                            <div>
+                                <h3 class="font-bold text-slate-800">Cobranças Recentes</h3>
+                                <p class="text-xs text-slate-500">Últimas vendas geradas pelos vendedores</p>
+                            </div>
+                            <button onclick="switchTab('sales')" class="text-brand-600 hover:text-brand-700 text-xs font-semibold flex items-center space-x-1">
+                                <span>Ver todas as vendas</span>
+                                <i class="fa-solid fa-arrow-right"></i>
+                            </button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse text-xs">
+                                <thead>
+                                    <tr class="bg-slate-50 text-slate-500 font-semibold uppercase tracking-wider border-b border-slate-100">
+                                        <th class="py-3 px-4">Código</th>
+                                        <th class="py-3 px-4">Cliente</th>
+                                        <th class="py-3 px-4">Vendedor</th>
+                                        <th class="py-3 px-4">Método</th>
+                                        <th class="py-3 px-4">Valor Total</th>
+                                        <th class="py-3 px-4">Status</th>
+                                        <th class="py-3 px-4 text-right">Ação</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="dashboard-recent-sales-table" class="divide-y divide-slate-100">
+                                    <!-- Dynamic Rows -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="tab-sales" class="space-y-6 hidden">
+                    <!-- Filters & Search Bar -->
+                    <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between">
+                        <div class="relative w-full md:w-96">
+                            <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 text-xs"></i>
+                            <input type="text" id="search-input" onkeyup="renderSalesTable()" placeholder="Buscar por cliente, código ou CPF/CNPJ..." class="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 transition">
+                        </div>
+
+                        <div class="flex flex-wrap items-center gap-3 w-full md:w-auto justify-end">
+                            <!-- Filter Status -->
+                            <select id="filter-status" onchange="renderSalesTable()" class="bg-slate-50 border border-slate-200 rounded-xl text-xs px-3 py-2 text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-brand-500">
+                                <option value="TODAS">Todos os Status</option>
+                                <option value="PENDENTE">Pendente</option>
+                                <option value="PAGO">Pago</option>
+                                <option value="ATRASADO">Atrasado</option>
+                                <option value="CANCELADO">Cancelado</option>
+                            </select>
+
+                            <!-- Filter Payment Method -->
+                            <select id="filter-method" onchange="renderSalesTable()" class="bg-slate-50 border border-slate-200 rounded-xl text-xs px-3 py-2 text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-brand-500">
+                                <option value="TODAS">Todas Formas Pagamento</option>
+                                <option value="PIX">PIX QR Code</option>
+                                <option value="BOLETO">Boleto Bancário</option>
+                                <option value="CARTAO">Cartão de Crédito</option>
+                            </select>
+
+                            <button onclick="openNewSaleModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs px-4 py-2 rounded-xl shadow-sm transition flex items-center space-x-1.5">
+                                <i class="fa-solid fa-plus"></i>
+                                <span>Nova Venda</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Complete Sales Table -->
+                    <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse text-xs">
+                                <thead>
+                                    <tr class="bg-slate-50 text-slate-500 font-semibold uppercase tracking-wider border-b border-slate-100">
+                                        <th class="py-3.5 px-4">ID Pedido</th>
+                                        <th class="py-3.5 px-4">Data/Hora</th>
+                                        <th class="py-3.5 px-4">Cliente</th>
+                                        <th class="py-3.5 px-4">Vendedor</th>
+                                        <th class="py-3.5 px-4">Itens</th>
+                                        <th class="py-3.5 px-4">Pagamento</th>
+                                        <th class="py-3.5 px-4">Valor Total</th>
+                                        <th class="py-3.5 px-4">Status</th>
+                                        <th class="py-3.5 px-4 text-center">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="full-sales-table" class="divide-y divide-slate-100">
+                                    <!-- Dynamic Rows -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="sales-empty-state" class="hidden p-8 text-center text-slate-400">
+                            <i class="fa-solid fa-folder-open text-4xl mb-2 text-slate-300"></i>
+                            <p class="text-sm font-medium text-slate-600">Nenhuma cobrança encontrada</p>
+                            <p class="text-xs text-slate-400">Tente ajustar os filtros de busca ou crie uma nova venda.</p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal: Nova Cobrança / Gerar Venda -->
+    <div id="modal-new-sale" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden no-print">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh]">
+            <!-- Modal Header -->
+            <div class="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <div class="w-8 h-8 bg-brand-500 rounded-lg flex items-center justify-center text-white">
+                        <i class="fa-solid fa-file-circle-plus"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-sm">Gerar Nova Cobrança / Pedido</h3>
+                        <p class="text-xs text-slate-400">Preencha os dados do cliente e produtos de gesso/drywall</p>
+                    </div>
+                </div>
+                <button onclick="closeNewSaleModal()" class="text-slate-400 hover:text-white p-1">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <!-- Modal Form Body -->
+            <form id="new-sale-form" onsubmit="handleCreateSale(event)" class="flex-1 overflow-y-auto p-6 space-y-5">
+                
+                <!-- Dados do Vendedor e Cliente -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Vendedor Responsável *</label>
+                        <select id="form-seller" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-500">
+                            <option value="Carlos Silva">Carlos Silva</option>
+                            <option value="Ana Paula">Ana Paula</option>
+                            <option value="Roberto Alves">Roberto Alves</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Nome do Cliente / Razão Social *</label>
+                        <input type="text" id="form-client-name" required placeholder="Ex: Construtora Silva ou João Santos" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">CPF ou CNPJ do Cliente</label>
+                        <input type="text" id="form-client-doc" placeholder="000.000.000-00 ou 00.000.000/0001-00" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">WhatsApp / Telefone *</label>
+                        <input type="tel" id="form-client-phone" required placeholder="(11) 99999-9999" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-500">
+                    </div>
+                </div>
+
+                <!-- Products / Items List Builder -->
+                <div class="border-t border-slate-100 pt-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="text-xs font-bold text-slate-800 uppercase tracking-wider">Itens do Pedido (Produtos / Serviços)</label>
+                        <button type="button" onclick="addProductRow()" class="text-xs font-semibold text-brand-600 hover:text-brand-700 flex items-center space-x-1">
+                            <i class="fa-solid fa-plus-circle"></i>
+                            <span>Adicionar Item</span>
+                        </button>
+                    </div>
+
+                    <div id="products-container" class="space-y-2">
+                        <!-- Dynamic Item Rows Added Here -->
+                    </div>
+                </div>
+
+                <!-- Payment Details Section -->
+                <div class="border-t border-slate-100 pt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Forma de Pagamento *</label>
+                        <select id="form-payment-method" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-500">
+                            <option value="PIX">PIX (Com QR Code Instantâneo)</option>
+                            <option value="BOLETO">Boleto Bancário</option>
+                            <option value="CARTAO">Cartão de Crédito</option>
+                            <option value="DINHEIRO">Dinheiro / Espécie</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Desconto Especial (R$)</label>
+                        <input type="number" step="0.01" min="0" id="form-discount" value="0" oninput="calculateModalTotals()" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-500">
+                    </div>
+                </div>
+
+                <!-- Summary Box -->
+                <div class="bg-slate-900 text-white p-4 rounded-xl flex items-center justify-between">
+                    <div>
+                        <p class="text-xs text-slate-400">Total a Cobrar do Cliente:</p>
+                        <span id="modal-total-display" class="text-2xl font-extrabold text-emerald-400">R$ 0,00</span>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-xs text-slate-400">Emissão para:</p>
+                        <p class="text-xs font-bold text-slate-200">Gesso Alves Ltda</p>
+                    </div>
+                </div>
+
+                <!-- Submit Buttons -->
+                <div class="flex items-center justify-end space-x-3 pt-2">
+                    <button type="button" onclick="closeNewSaleModal()" class="px-4 py-2 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="px-6 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md shadow-emerald-600/20 flex items-center space-x-2">
+                        <i class="fa-solid fa-check"></i>
+                        <span>Gerar Cobrança Agora</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Visualizar Cobrança / Comprovante -->
+    <div id="modal-view-receipt" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden overflow-y-auto">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden my-8">
+            
+            <!-- Actions Toolbar (No Print) -->
+            <div class="bg-slate-800 text-white px-6 py-3 flex items-center justify-between no-print">
+                <span class="text-xs font-medium text-slate-300">
+                    <i class="fa-solid fa-receipt mr-1"></i> Comprovante & Cobrança de Venda
+                </span>
+                <div class="flex items-center space-x-2">
+                    <button id="btn-whatsapp-send" onclick="sendWhatsAppReceipt()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition flex items-center space-x-1.5">
+                        <i class="fa-brands fa-whatsapp text-sm"></i>
+                        <span>Enviar no WhatsApp</span>
+                    </button>
+                    <button onclick="window.print()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-xs font-medium transition flex items-center space-x-1">
+                        <i class="fa-solid fa-print"></i>
+                        <span>Imprimir / PDF</span>
+                    </button>
+                    <button onclick="closeReceiptModal()" class="text-slate-400 hover:text-white p-1">
+                        <i class="fa-solid fa-xmark text-lg"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Receipt Content (Printable) -->
+            <div id="receipt-printable-area" class="p-8 space-y-6 text-slate-800 bg-white">
+                
+                <!-- Company Header -->
+                <div class="border-b border-slate-200 pb-6 flex justify-between items-start">
+                    <div>
+                        <h2 class="text-2xl font-black tracking-tight text-slate-900 uppercase">GESSO ALVES</h2>
+                        <p class="text-xs text-slate-500 font-medium">Soluções em Gesso, Drywall e Acabamentos</p>
+                        <div class="mt-2 text-xs text-slate-600 space-y-0.5">
+                            <p><strong>CNPJ:</strong> 09.108.273/0001-29</p>
+                            <p><strong>E-mail:</strong> comercialgessoalves@gmail.com</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <span id="receipt-status-badge" class="inline-block px-3 py-1 text-xs font-bold rounded-full bg-amber-100 text-amber-800 mb-2">
+                            PENDENTE
+                        </span>
+                        <p id="receipt-id" class="text-xs font-mono font-bold text-slate-500">COB-#000000</p>
+                        <p id="receipt-date" class="text-xs text-slate-400">Data: 00/00/0000</p>
+                    </div>
+                </div>
+
+                <!-- Client and Salesperson Info Grid -->
+                <div class="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200/80 text-xs">
+                    <div>
+                        <p class="text-slate-400 font-medium uppercase tracking-wider text-[10px]">Dados do Cliente</p>
+                        <p id="receipt-client-name" class="font-bold text-slate-800 text-sm mt-0.5">Nome do Cliente</p>
+                        <p id="receipt-client-doc" class="text-slate-500">CPF/CNPJ: -</p>
+                        <p id="receipt-client-phone" class="text-slate-500">Tel/Zap: -</p>
+                    </div>
+                    <div>
+                        <p class="text-slate-400 font-medium uppercase tracking-wider text-[10px]">Dados da Venda</p>
+                        <p id="receipt-seller-name" class="font-semibold text-slate-800 mt-0.5">Vendedor: Carlos Silva</p>
+                        <p id="receipt-payment-type" class="text-slate-600">Forma Pagamento: PIX</p>
+                    </div>
+                </div>
+
+                <!-- Items Table -->
+                <div>
+                    <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Discriminação dos Produtos / Serviços</h4>
+                    <table class="w-full text-left text-xs border-collapse">
+                        <thead>
+                            <tr class="border-b border-slate-200 text-slate-400 font-semibold uppercase">
+                                <th class="py-2">Item</th>
+                                <th class="py-2 text-center">Qtd</th>
+                                <th class="py-2 text-right">V. Unit</th>
+                                <th class="py-2 text-right">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody id="receipt-items-list" class="divide-y divide-slate-100">
+                            <!-- Items inserted dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Total Breakdown -->
+                <div class="border-t border-slate-200 pt-4 flex justify-end">
+                    <div class="w-64 space-y-1.5 text-xs">
+                        <div class="flex justify-between text-slate-500">
+                            <span>Subtotal:</span>
+                            <span id="receipt-subtotal">R$ 0,00</span>
+                        </div>
+                        <div class="flex justify-between text-slate-500">
+                            <span>Desconto:</span>
+                            <span id="receipt-discount">- R$ 0,00</span>
+                        </div>
+                        <div class="flex justify-between text-base font-extrabold text-slate-900 border-t border-slate-200 pt-2">
+                            <span>TOTAL:</span>
+                            <span id="receipt-grand-total" class="text-emerald-600">R$ 0,00</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Payment Instructions Box / Dynamic QR Code -->
+                <div id="receipt-payment-box" class="bg-brand-50/60 border border-brand-100 rounded-xl p-4 flex flex-col md:flex-row items-center justify-between gap-4">
+                    <div class="flex items-center space-x-4">
+                        <div id="qrcode-container" class="bg-white p-2 rounded-lg border border-slate-200 flex-shrink-0">
+                            <!-- Dynamic QR Code rendered here -->
+                        </div>
+                        <div class="space-y-1 text-xs">
+                            <p class="font-bold text-brand-900 flex items-center">
+                                <i class="fa-solid fa-qrcode text-brand-600 mr-1.5"></i>
+                                Escaneie o QR Code Pix para Pagar
+                            </p>
+                            <p class="text-slate-600 text-[11px]">Chave Pix da Empresa (CNPJ):</p>
+                            <p class="font-mono bg-white px-2 py-1 rounded border border-brand-200 font-bold text-slate-800 text-[11px] inline-block">
+                                09.108.273/0001-29
+                            </p>
+                            <p class="text-[10px] text-slate-400">Favorecido: Gesso Alves Ltda</p>
+                        </div>
+                    </div>
+                    <button type="button" onclick="copyPixPayload()" class="no-print bg-brand-600 hover:bg-brand-700 text-white text-xs px-3 py-2 rounded-lg font-medium transition flex items-center space-x-1 shadow-sm">
+                        <i class="fa-regular fa-copy"></i>
+                        <span>Copiar Chave PIX</span>
+                    </button>
+                </div>
+
+                <div class="text-center text-[10px] text-slate-400 border-t border-slate-100 pt-4">
+                    <p>Obrigado por escolher a <strong>Gesso Alves</strong>!</p>
+                    <p>Em caso de dúvidas sobre este documento, entre em contato pelo comercialgessoalves@gmail.com</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast System -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col space-y-2 pointer-events-none no-print"></div>
+
+    <script>
+        // Default Catalog Products for quick sale generation
+        const CATALOG_PRODUCTS = [
+            { name: "Placa Drywall ST 1200x1800mm 12.5mm", price: 38.90 },
+            { name: "Placa Drywall RU (Resistente à Umidade)", price: 54.00 },
+            { name: "Saco de Gesso Cola 20kg", price: 29.90 },
+            { name: "Saco de Gesso Liso Revestimento 40kg", price: 32.50 },
+            { name: "Perfil Canaleta F530 3 metros", price: 18.50 },
+            { name: "Perfil Montante 48mm x 3m", price: 22.00 },
+            { name: "Placa 3D de Gesso (M²)", price: 45.00 },
+            { name: "Banda Acústica Emborrachada 50mm", price: 35.00 },
+            { name: "Parafuso GN 25 1000 un", price: 42.00 },
+            { name: "Mão de Obra Instalação de Forro (M²)", price: 35.00 }
+        ];
+
+        // Initial Mock Sales Data
+        let salesData = [
+            {
+                id: "COB-98214",
+                date: "2026-10-08 10:30",
+                clientName: "Construtora Horizonte",
+                clientDoc: "12.345.678/0001-90",
+                clientPhone: "11988776655",
+                seller: "Carlos Silva",
+                items: [
+                    { name: "Placa Drywall ST 1200x1800mm 12.5mm", qty: 50, price: 38.90 },
+                    { name: "Perfil Canaleta F530 3 metros", qty: 30, price: 18.50 }
+                ],
+                discount: 50.00,
+                paymentMethod: "PIX",
+                status: "PAGO"
+            },
+            {
+                id: "COB-98215",
+                date: "2026-10-08 11:15",
+                clientName: "Marcos Vinicius Rezende",
+                clientDoc: "321.654.987-00",
+                clientPhone: "11977665544",
+                seller: "Ana Paula",
+                items: [
+                    { name: "Placa 3D de Gesso (M²)", qty: 25, price: 45.00 },
+                    { name: "Saco de Gesso Cola 20kg", qty: 3, price: 29.90 }
+                ],
+                discount: 0,
+                paymentMethod: "PIX",
+                status: "PENDENTE"
+            },
+            {
+                id: "COB-98216",
+                date: "2026-10-07 15:40",
+                clientName: "Reformas e Acabamentos S.A.",
+                clientDoc: "98.765.432/0001-11",
+                clientPhone: "11966554433",
+                seller: "Roberto Alves",
+                items: [
+                    { name: "Saco de Gesso Liso Revestimento 40kg", qty: 40, price: 32.50 },
+                    { name: "Mão de Obra Instalação de Forro (M²)", qty: 60, price: 35.00 }
+                ],
+                discount: 100.00,
+                paymentMethod: "BOLETO",
+                status: "PAGO"
+            },
+            {
+                id: "COB-98217",
+                date: "2026-10-06 09:10",
+                clientName: "Luciana Ferreira",
+                clientDoc: "456.789.123-44",
+                clientPhone: "11955443322",
+                seller: "Carlos Silva",
+                items: [
+                    { name: "Placa Drywall RU (Resistente à Umidade)", qty: 15, price: 54.00 }
+                ],
+                discount: 0,
+                paymentMethod: "CARTAO",
+                status: "ATRASADO"
+            }
+        ];
+
+        let activeSeller = "TODOS";
+        let activeStatusFilter = "TODAS";
+        let currentViewingSale = null;
+        let salesBarChartInstance = null;
+        let paymentMethodsChartInstance = null;
+
+        // Initialize on DOM Ready
+        window.onload = function() {
+            renderDashboard();
+            renderSalesTable();
+            initCharts();
+        };
+
+        function switchTab(tab) {
+            const dashTab = document.getElementById('tab-dashboard');
+            const salesTab = document.getElementById('tab-sales');
+            const navDash = document.getElementById('nav-dashboard');
+            const navSales = document.getElementById('nav-sales');
+            const pageTitle = document.getElementById('page-title');
+
+            if (tab === 'dashboard') {
+                dashTab.classList.remove('hidden');
+                salesTab.classList.add('hidden');
+                navDash.className = "w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors bg-brand-600 text-white";
+                navSales.className = "w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors hover:bg-slate-800 hover:text-white text-slate-300";
+                pageTitle.innerText = "Visão Geral do Painel";
+            } else {
+                dashTab.classList.add('hidden');
+                salesTab.classList.remove('hidden');
+                navSales.className = "w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors bg-brand-600 text-white";
+                navDash.className = "w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors hover:bg-slate-800 hover:text-white text-slate-300";
+                pageTitle.innerText = "Gestão Geral de Vendas & Cobranças";
+            }
+        }
+
+        function changeActiveSeller(seller) {
+            activeSeller = seller;
+            renderDashboard();
+            renderSalesTable();
+            updateCharts();
+            showToast(`Filtro alterado para: ${seller}`, 'info');
+        }
+
+        function filterByStatus(status) {
+            activeStatusFilter = status;
+            document.getElementById('filter-status').value = status;
+            switchTab('sales');
+            renderSalesTable();
+        }
+
+        function getFilteredSales() {
+            return salesData.filter(s => {
+                const matchSeller = (activeSeller === 'TODOS' || s.seller === activeSeller);
+                return matchSeller;
+            });
+        }
+
+        function formatCurrency(val) {
+            return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
+        }
+
+        function calculateSaleTotal(sale) {
+            const subtotal = sale.items.reduce((acc, item) => acc + (item.price * item.qty), 0);
+            return Math.max(0, subtotal - (sale.discount || 0));
+        }
+
+        function renderDashboard() {
+            const filtered = getFilteredSales();
+
+            const totalPaid = filtered.filter(s => s.status === 'PAGO').reduce((acc, s) => acc + calculateSaleTotal(s), 0);
+            const totalPending = filtered.filter(s => s.status === 'PENDENTE' || s.status === 'ATRASADO').reduce((acc, s) => acc + calculateSaleTotal(s), 0);
+            const totalOrders = filtered.length;
+            const avgTicket = totalOrders > 0 ? (filtered.reduce((acc, s) => acc + calculateSaleTotal(s), 0) / totalOrders) : 0;
+
+            document.getElementById('kpi-total-paid').innerText = formatCurrency(totalPaid);
+            document.getElementById('kpi-total-pending').innerText = formatCurrency(totalPending);
+            document.getElementById('kpi-total-orders').innerText = totalOrders;
+            document.getElementById('kpi-average-ticket').innerText = formatCurrency(avgTicket);
+
+            // Badges
+            document.getElementById('badge-count-all').innerText = salesData.length;
+            document.getElementById('badge-count-pending').innerText = salesData.filter(s => s.status === 'PENDENTE').length;
+            document.getElementById('badge-count-paid').innerText = salesData.filter(s => s.status === 'PAGO').length;
+
+            // Render Recent Sales Table on Dashboard
+            const recentTable = document.getElementById('dashboard-recent-sales-table');
+            recentTable.innerHTML = '';
+
+            const recentSales = [...filtered].reverse().slice(0, 5);
+
+            if (recentSales.length === 0) {
+                recentTable.innerHTML = `<tr><td colspan="7" class="text-center py-6 text-slate-400">Nenhuma venda registrada ainda.</td></tr>`;
+                return;
+            }
+
+            recentSales.forEach(sale => {
+                const total = calculateSaleTotal(sale);
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 transition";
+                tr.innerHTML = `
+                    <td class="py-3 px-4 font-mono font-bold text-slate-700">${sale.id}</td>
+                    <td class="py-3 px-4 font-medium text-slate-900">${sale.clientName}</td>
+                    <td class="py-3 px-4 text-slate-600">${sale.seller}</td>
+                    <td class="py-3 px-4"><span class="px-2 py-0.5 rounded bg-slate-100 font-semibold text-[10px] text-slate-600">${sale.paymentMethod}</span></td>
+                    <td class="py-3 px-4 font-bold text-slate-900">${formatCurrency(total)}</td>
+                    <td class="py-3 px-4">${getStatusBadge(sale.status)}</td>
+                    <td class="py-3 px-4 text-right">
+                        <button onclick="viewReceipt('${sale.id}')" class="text-brand-600 hover:text-brand-800 bg-brand-50 p-1.5 rounded-lg transition" title="Ver Cobrança">
+                            <i class="fa-solid fa-eye"></i>
+                        </button>
+                    </td>
+                `;
+                recentTable.appendChild(tr);
+            });
+        }
+
+        function renderSalesTable() {
+            const tableBody = document.getElementById('full-sales-table');
+            const emptyState = document.getElementById('sales-empty-state');
+            const searchVal = document.getElementById('search-input').value.toLowerCase();
+            const statusVal = document.getElementById('filter-status').value;
+            const methodVal = document.getElementById('filter-method').value;
+
+            tableBody.innerHTML = '';
+
+            const filtered = salesData.filter(s => {
+                const matchSeller = (activeSeller === 'TODOS' || s.seller === activeSeller);
+                const matchStatus = (statusVal === 'TODAS' || s.status === statusVal);
+                const matchMethod = (methodVal === 'TODAS' || s.paymentMethod === methodVal);
+                const matchSearch = s.clientName.toLowerCase().includes(searchVal) ||
+                                    s.id.toLowerCase().includes(searchVal) ||
+                                    (s.clientDoc && s.clientDoc.includes(searchVal));
+
+                return matchSeller && matchStatus && matchMethod && matchSearch;
+            });
+
+            if (filtered.length === 0) {
+                emptyState.classList.remove('hidden');
+                return;
+            } else {
+                emptyState.classList.add('hidden');
+            }
+
+            [...filtered].reverse().forEach(sale => {
+                const total = calculateSaleTotal(sale);
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 transition border-b border-slate-100";
+                tr.innerHTML = `
+                    <td class="py-3.5 px-4 font-mono font-bold text-slate-800">${sale.id}</td>
+                    <td class="py-3.5 px-4 text-slate-500 text-[11px]">${sale.date}</td>
+                    <td class="py-3.5 px-4 font-medium text-slate-900">
+                        <div>${sale.clientName}</div>
+                        <div class="text-[10px] text-slate-400">${sale.clientDoc || 'Sem CPF/CNPJ'}</div>
+                    </td>
+                    <td class="py-3.5 px-4 text-slate-600">${sale.seller}</td>
+                    <td class="py-3.5 px-4 text-slate-500">${sale.items.length} item(ns)</td>
+                    <td class="py-3.5 px-4"><span class="px-2 py-0.5 rounded bg-slate-100 font-semibold text-[10px] text-slate-700">${sale.paymentMethod}</span></td>
+                    <td class="py-3.5 px-4 font-bold text-slate-900">${formatCurrency(total)}</td>
+                    <td class="py-3.5 px-4">${getStatusBadge(sale.status)}</td>
+                    <td class="py-3.5 px-4 text-center">
+                        <div class="flex items-center justify-center space-x-2">
+                            <button onclick="viewReceipt('${sale.id}')" class="bg-brand-50 text-brand-600 hover:bg-brand-100 p-2 rounded-lg transition" title="Ver Cobrança / QR Code">
+                                <i class="fa-solid fa-receipt"></i>
+                            </button>
+                            ${sale.status !== 'PAGO' ? `
+                                <button onclick="markAsPaid('${sale.id}')" class="bg-emerald-50 text-emerald-600 hover:bg-emerald-100 p-2 rounded-lg transition" title="Marcar como Pago">
+                                    <i class="fa-solid fa-circle-check"></i>
+                                </button>
+                            ` : ''}
+                            <button onclick="sendWhatsAppDirect('${sale.id}')" class="bg-emerald-50 text-emerald-700 hover:bg-emerald-200 p-2 rounded-lg transition" title="Enviar WhatsApp">
+                                <i class="fa-brands fa-whatsapp text-sm"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                tableBody.appendChild(tr);
+            });
+        }
+
+        function getStatusBadge(status) {
+            switch(status) {
+                case 'PAGO':
+                    return `<span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800"><i class="fa-solid fa-check mr-1"></i>PAGO</span>`;
+                case 'PENDENTE':
+                    return `<span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800"><i class="fa-solid fa-clock mr-1"></i>PENDENTE</span>`;
+                case 'ATRASADO':
+                    return `<span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800"><i class="fa-solid fa-triangle-exclamation mr-1"></i>ATRASADO</span>`;
+                default:
+                    return `<span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600">CANCELADO</span>`;
+            }
+        }
+
+        function openNewSaleModal() {
+            document.getElementById('modal-new-sale').classList.remove('hidden');
+            document.getElementById('products-container').innerHTML = '';
+            // Add first row by default
+            addProductRow();
+            // Set default seller
+            if (activeSeller !== 'TODOS') {
+                document.getElementById('form-seller').value = activeSeller;
+            }
+            calculateModalTotals();
+        }
+
+        function closeNewSaleModal() {
+            document.getElementById('modal-new-sale').classList.add('hidden');
+        }
+
+        function addProductRow() {
+            const container = document.getElementById('products-container');
+            const rowId = Date.now();
+            const div = document.createElement('div');
+            div.className = "flex items-center space-x-2 bg-slate-50 p-2 rounded-xl border border-slate-200 product-row";
+            div.id = `row-${rowId}`;
+
+            let selectOptions = CATALOG_PRODUCTS.map(p => `<option value="${p.name}" data-price="${p.price}">${p.name} - R$ ${p.price.toFixed(2)}</option>`).join('');
+
+            div.innerHTML = `
+                <div class="flex-1">
+                    <select class="item-name w-full bg-white border border-slate-200 rounded-lg text-xs p-1.5 focus:outline-none focus:ring-1 focus:ring-brand-500" onchange="updateItemPrice(this)">
+                        ${selectOptions}
+                    </select>
+                </div>
+                <div class="w-20">
+                    <input type="number" min="1" value="1" class="item-qty w-full bg-white border border-slate-200 rounded-lg text-xs p-1.5 text-center focus:outline-none" oninput="calculateModalTotals()">
+                </div>
+                <div class="w-28">
+                    <input type="number" step="0.01" min="0" value="${CATALOG_PRODUCTS[0].price}" class="item-price w-full bg-white border border-slate-200 rounded-lg text-xs p-1.5 text-right focus:outline-none" oninput="calculateModalTotals()">
+                </div>
+                <button type="button" onclick="removeProductRow('row-${rowId}')" class="text-rose-500 hover:text-rose-700 p-1">
+                    <i class="fa-solid fa-trash"></i>
+                </button>
+            `;
+            container.appendChild(div);
+            calculateModalTotals();
+        }
+
+        function removeProductRow(rowId) {
+            const rows = document.querySelectorAll('.product-row');
+            if (rows.length <= 1) {
+                showToast("A venda precisa ter pelo menos 1 produto.", 'warning');
+                return;
+            }
+            document.getElementById(rowId).remove();
+            calculateModalTotals();
+        }
+
+        function updateItemPrice(selectElem) {
+            const selectedOption = selectElem.options[selectElem.selectedIndex];
+            const price = parseFloat(selectedOption.getAttribute('data-price')) || 0;
+            const parent = selectElem.closest('.product-row');
+            parent.querySelector('.item-price').value = price.toFixed(2);
+            calculateModalTotals();
+        }
+
+        function calculateModalTotals() {
+            const rows = document.querySelectorAll('.product-row');
+            let subtotal = 0;
+
+            rows.forEach(row => {
+                const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
+                const price = parseFloat(row.querySelector('.item-price').value) || 0;
+                subtotal += (qty * price);
+            });
+
+            const discount = parseFloat(document.getElementById('form-discount').value) || 0;
+            const total = Math.max(0, subtotal - discount);
+
+            document.getElementById('modal-total-display').innerText = formatCurrency(total);
+        }
+
+        function handleCreateSale(e) {
+            e.preventDefault();
+
+            const seller = document.getElementById('form-seller').value;
+            const clientName = document.getElementById('form-client-name').value.trim();
+            const clientDoc = document.getElementById('form-client-doc').value.trim();
+            const clientPhone = document.getElementById('form-client-phone').value.trim();
+            const paymentMethod = document.getElementById('form-payment-method').value;
+            const discount = parseFloat(document.getElementById('form-discount').value) || 0;
+
+            const items = [];
+            document.querySelectorAll('.product-row').forEach(row => {
+                const name = row.querySelector('.item-name').value;
+                const qty = parseFloat(row.querySelector('.item-qty').value) || 1;
+                const price = parseFloat(row.querySelector('.item-price').value) || 0;
+                items.push({ name, qty, price });
+            });
+
+            const newId = `COB-${Math.floor(10000 + Math.random() * 90000)}`;
+            const now = new Date();
+            const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+            const newSale = {
+                id: newId,
+                date: dateStr,
+                clientName,
+                clientDoc,
+                clientPhone,
+                seller,
+                items,
+                discount,
+                paymentMethod,
+                status: 'PENDENTE'
+            };
+
+            salesData.push(newSale);
+            closeNewSaleModal();
+            renderDashboard();
+            renderSalesTable();
+            updateCharts();
+
+            showToast(`Cobrança ${newId} criada com sucesso!`, 'success');
+            viewReceipt(newId);
+        }
+
+        function viewReceipt(saleId) {
+            const sale = salesData.find(s => s.id === saleId);
+            if (!sale) return;
+
+            currentViewingSale = sale;
+
+            document.getElementById('receipt-id').innerText = sale.id;
+            document.getElementById('receipt-date').innerText = `Data: ${sale.date}`;
+            document.getElementById('receipt-client-name').innerText = sale.clientName;
+            document.getElementById('receipt-client-doc').innerText = `CPF/CNPJ: ${sale.clientDoc || 'Não informado'}`;
+            document.getElementById('receipt-client-phone').innerText = `WhatsApp: ${sale.clientPhone}`;
+            document.getElementById('receipt-seller-name').innerText = `Vendedor: ${sale.seller}`;
+            document.getElementById('receipt-payment-type').innerText = `Forma de Pagamento: ${sale.paymentMethod}`;
+
+            // Status Badge
+            const badge = document.getElementById('receipt-status-badge');
+            badge.className = `inline-block px-3 py-1 text-xs font-bold rounded-full mb-2 ${
+                sale.status === 'PAGO' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+            }`;
+            badge.innerText = sale.status;
+
+            // Render Items
+            const itemsList = document.getElementById('receipt-items-list');
+            itemsList.innerHTML = '';
+            let subtotal = 0;
+
+            sale.items.forEach(item => {
+                const itemTotal = item.qty * item.price;
+                subtotal += itemTotal;
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="py-2 text-slate-800 font-medium">${item.name}</td>
+                    <td class="py-2 text-center text-slate-600">${item.qty}</td>
+                    <td class="py-2 text-right text-slate-600">${formatCurrency(item.price)}</td>
+                    <td class="py-2 text-right font-bold text-slate-800">${formatCurrency(itemTotal)}</td>
+                `;
+                itemsList.appendChild(tr);
+            });
+
+            const grandTotal = Math.max(0, subtotal - sale.discount);
+
+            document.getElementById('receipt-subtotal').innerText = formatCurrency(subtotal);
+            document.getElementById('receipt-discount').innerText = `- ${formatCurrency(sale.discount)}`;
+            document.getElementById('receipt-grand-total').innerText = formatCurrency(grandTotal);
+
+            // Generate Dynamic QR Code Pix
+            const qrContainer = document.getElementById('qrcode-container');
+            qrContainer.innerHTML = '';
+            
+            // Payload Pix Mock com CNPJ Gesso Alves
+            const pixPayload = `00020126580014BR.GOV.BCB.PIX01360910827300012952040000530398654${grandTotal.toFixed(2)}5802BR5911GESSO ALVES6009SAO PAULO62070503***63041D2C`;
+            
+            new QRCode(qrContainer, {
+                text: pixPayload,
+                width: 90,
+                height: 90,
+                colorDark: "#0f172a",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.M
+            });
+
+            document.getElementById('modal-view-receipt').classList.remove('hidden');
+        }
+
+        function closeReceiptModal() {
+            document.getElementById('modal-view-receipt').classList.add('hidden');
+        }
+
+        function markAsPaid(saleId) {
+            const sale = salesData.find(s => s.id === saleId);
+            if (sale) {
+                sale.status = 'PAGO';
+                renderDashboard();
+                renderSalesTable();
+                updateCharts();
+                showToast(`Cobrança ${saleId} marcada como PAGA!`, 'success');
+                if (currentViewingSale && currentViewingSale.id === saleId) {
+                    viewReceipt(saleId);
+                }
+            }
+        }
+
+        function copyPixPayload() {
+            const key = "09.108.273/0001-29";
+            // Use execCommand fallback for iFrame compatibility
+            const tempInput = document.createElement("input");
+            tempInput.value = key;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand("copy");
+            document.body.removeChild(tempInput);
+
+            showToast("Chave Pix (CNPJ) copiada para a área de transferência!", "success");
+        }
+
+        function sendWhatsAppReceipt() {
+            if (!currentViewingSale) return;
+            const total = calculateSaleTotal(currentViewingSale);
+            const msg = `Olá *${currentViewingSale.clientName}*!\n\nSegue os detalhes da sua cobrança da *Gesso Alves*:\n\n📌 *Pedido:* ${currentViewingSale.id}\n💰 *Valor Total:* ${formatCurrency(total)}\n💳 *Pagamento:* ${currentViewingSale.paymentMethod}\n\n🔑 *Chave PIX (CNPJ):* 09.108.273/0001-29\n\nQualquer dúvida estamos à disposição pelo e-mail comercialgessoalves@gmail.com!`;
+
+            const phone = currentViewingSale.clientPhone.replace(/\D/g, '');
+            const url = `https://api.whatsapp.com/send?phone=55${phone}&text=${encodeURIComponent(msg)}`;
+            window.open(url, '_blank');
+        }
+
+        function sendWhatsAppDirect(saleId) {
+            const sale = salesData.find(s => s.id === saleId);
+            if (!sale) return;
+            currentViewingSale = sale;
+            sendWhatsAppReceipt();
+        }
+
+        function initCharts() {
+            // Bar Chart
+            const ctxBar = document.getElementById('salesBarChart').getContext('2d');
+            salesBarChartInstance = new Chart(ctxBar, {
+                type: 'bar',
+                data: {
+                    labels: ['Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out'],
+                    datasets: [{
+                        label: 'Faturamento (R$)',
+                        data: [12400, 15800, 18200, 14900, 21000, 24500],
+                        backgroundColor: '#0284c7',
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: '#f1f5f9' } },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+
+            // Doughnut Chart
+            const ctxPie = document.getElementById('paymentMethodsChart').getContext('2d');
+            paymentMethodsChartInstance = new Chart(ctxPie, {
+                type: 'doughnut',
+                data: {
+                    labels: ['PIX', 'Boleto', 'Cartão de Crédito'],
+                    datasets: [{
+                        data: [65, 20, 15],
+                        backgroundColor: ['#10b981', '#0284c7', '#f59e0b']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom' } }
+                }
+            });
+        }
+
+        function updateCharts() {
+            if (!salesBarChartInstance || !paymentMethodsChartInstance) return;
+
+            const filtered = getFilteredSales();
+            const pixCount = filtered.filter(s => s.paymentMethod === 'PIX').length;
+            const boletoCount = filtered.filter(s => s.paymentMethod === 'BOLETO').length;
+            const cartaoCount = filtered.filter(s => s.paymentMethod === 'CARTAO').length;
+
+            paymentMethodsChartInstance.data.datasets[0].data = [pixCount || 1, boletoCount || 0, cartaoCount || 0];
+            paymentMethodsChartInstance.update();
+        }
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+
+            let bgColor = 'bg-slate-900';
+            let icon = 'fa-circle-info';
+
+            if (type === 'success') {
+                bgColor = 'bg-emerald-600';
+                icon = 'fa-circle-check';
+            } else if (type === 'warning') {
+                bgColor = 'bg-amber-600';
+                icon = 'fa-triangle-exclamation';
+            }
+
+            toast.className = `${bgColor} text-white text-xs px-4 py-3 rounded-xl shadow-xl flex items-center space-x-2 transition-all transform translate-y-2 opacity-0 pointer-events-auto`;
+            toast.innerHTML = `<i class="fa-solid ${icon}"></i><span>${message}</span>`;
+
+            container.appendChild(toast);
+
+            // Animate in
+            setTimeout(() => {
+                toast.classList.remove('translate-y-2', 'opacity-0');
+            }, 10);
+
+            // Remove after 3.5 seconds
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
+    </script>
+</body>
+</html>
